@@ -2,17 +2,38 @@ const express = require('express');
 let axios = require('axios');
 var app = express();
 
-app.post('/', function(req, res, next) {
-  try {
-    let results = req.body.developers.map(async d => {
-      return await axios.get(`https://api.github.com/users/${d}`);
-    });
-    let out = results.map(r => ({ name: r.data.name, bio: r.data.bio }));
 
-    return res.send(JSON.stringify(out));
-  } catch {
-    next(err);
+app.use(express.json()); //For JSON
+app.use(express.urlencoded({ extended: true }));
+
+app.post('/', function(req, res, next) {
+  let devs = req.body
+  let out = []
+
+  async function sendData(){
+    for(let dev of devs.developers){
+      const goingOut = await getData(dev)
+      out.push(goingOut)
+    }
+    res.json(out)
   }
+
+  async function getData(d){
+    try{
+      const response = await axios.get(`https://api.github.com/users/${d}`);
+      let retrieved = {}
+      retrieved.name = response.data.name
+      retrieved.bio = response.data.bio
+      return retrieved
+    } catch(err) {
+      next(err);
+    }
+  }
+  
+  sendData()
+     
 });
 
-app.listen(3000);
+app.listen(3000, () => {
+  console.log("Server running on port 3000")
+});
